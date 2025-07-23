@@ -14,12 +14,12 @@ function City() {
     notes: "My favorite city so far!",
   };
 
-  const { cityName, emoji, date, notes, id } = currentCity;
+  const { cityName, emoji, date, notes,  } = currentCity;
 
   return (
     <div className={styles.city}>
       <div className={styles.row}>
-        <h6>City name</h6>
+        <h6>City {id}</h6>
         <h3>
           <span>{emoji}</span> {cityName}
         </h3>
@@ -27,7 +27,7 @@ function City() {
 
       <div className={styles.row}>
         <h6>You went to {cityName} on</h6>
-        <p>{formatDate(date || null)}</p>
+        <p>{(date || null)}</p>
       </div>
 
       {notes && (
