@@ -1,9 +1,12 @@
+import { useCities } from '../contexts/CititesContext';
 import CityItem from './CityItem';
 import styles from './CityList.module.css';
 import Message from './Message';
 import Spinner from './Spinner';
 
-export default function CityList({ cities, isLoading }) {
+export default function CityList() {
+  const {cities, isLoading} = useCities();
+
   if (isLoading) return <Spinner />;
   if (!cities.length) return <Message message="Add your city and lets get started"/>
   return (
@@ -15,9 +18,3 @@ export default function CityList({ cities, isLoading }) {
   );
 }
 
-import PropTypes from 'prop-types';
-
-CityList.propTypes = {
-  cities: PropTypes.arrayOf(PropTypes.object).isRequired,
-  isLoading: PropTypes.bool.isRequired,
-};
