@@ -1,9 +1,13 @@
 .nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between; 
 }
 
+.nav .logo{
+  display: flex;
+   height: 5.1rem;
+}
 .nav ul {
   list-style: none;
   display: flex;
