@@ -5,8 +5,15 @@ import {
   useReducer,
   useCallback,
 } from "react";
-
-const BASE_URL = "http://localhost:8000";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { db } from "../config/firebase";
 
 const CitiesContext = createContext();
 
@@ -21,17 +28,10 @@ function reducer(state, action) {
   switch (action.type) {
     case "loading":
       return { ...state, isLoading: true };
-
     case "cities/loaded":
-      return {
-        ...state,
-        isLoading: false,
-        cities: action.payload,
-      };
-
+      return { ...state, isLoading: false, cities: action.payload };
     case "city/loaded":
       return { ...state, isLoading: false, currentCity: action.payload };
-
     case "city/created":
       return {
         ...state,
@@ -39,7 +39,6 @@ function reducer(state, action) {
         cities: [...state.cities, action.payload],
         currentCity: action.payload,
       };
-
     case "city/deleted":
       return {
         ...state,
@@ -47,14 +46,8 @@ function reducer(state, action) {
         cities: state.cities.filter((city) => city.id !== action.payload),
         currentCity: {},
       };
-
     case "rejected":
-      return {
-        ...state,
-        isLoading: false,
-        error: action.payload,
-      };
-
+      return { ...state, isLoading: false, error: action.payload };
     default:
       throw new Error("Unknown action type");
   }
@@ -66,94 +59,66 @@ function CitiesProvider({ children }) {
     initialState
   );
 
+  // Load all cities from Firestore on mount
   useEffect(function () {
     async function fetchCities() {
       dispatch({ type: "loading" });
-
       try {
-        const res = await fetch(`${BASE_URL}/cities`);
-        const data = await res.json();
+        const snapshot = await getDocs(collection(db, "cities"));
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         dispatch({ type: "cities/loaded", payload: data });
       } catch {
-        dispatch({
-          type: "rejected",
-          payload: "There was an error loading cities...",
-        });
+        dispatch({ type: "rejected", payload: "Error loading cities..." });
       }
     }
     fetchCities();
   }, []);
 
+  // Get a single city by its Firestore document ID
   const getCity = useCallback(
     async function getCity(id) {
-      if (Number(id) === currentCity.id) return;
-
+      if (id === currentCity.id) return;
       dispatch({ type: "loading" });
-
       try {
-        const res = await fetch(`${BASE_URL}/cities/${id}`);
-        const data = await res.json();
-        dispatch({ type: "city/loaded", payload: data });
+        const ref = doc(db, "cities", id);
+        const snapshot = await getDoc(ref);
+        dispatch({ type: "city/loaded", payload: { id: snapshot.id, ...snapshot.data() } });
       } catch {
-        dispatch({
-          type: "rejected",
-          payload: "There was an error loading the city...",
-        });
+        dispatch({ type: "rejected", payload: "Error loading city..." });
       }
     },
     [currentCity.id]
   );
 
+  // Add a new city document to Firestore
   async function createCity(newCity) {
     dispatch({ type: "loading" });
-
     try {
-      const res = await fetch(`${BASE_URL}/cities`, {
-        method: "POST",
-        body: JSON.stringify(newCity),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await res.json();
-
-      dispatch({ type: "city/created", payload: data });
+      const ref = await addDoc(collection(db, "cities"), newCity);
+      const created = { ...newCity, id: ref.id };
+      dispatch({ type: "city/created", payload: created });
     } catch {
-      dispatch({
-        type: "rejected",
-        payload: "There was an error creating the city...",
-      });
+      dispatch({ type: "rejected", payload: "Error creating city..." });
     }
   }
 
+  // Delete a city document from Firestore
   async function deleteCity(id) {
     dispatch({ type: "loading" });
-
     try {
-      await fetch(`${BASE_URL}/cities/${id}`, {
-        method: "DELETE",
-      });
-
+      await deleteDoc(doc(db, "cities", id));
       dispatch({ type: "city/deleted", payload: id });
     } catch {
-      dispatch({
-        type: "rejected",
-        payload: "There was an error deleting the city...",
-      });
+      dispatch({ type: "rejected", payload: "Error deleting city..." });
     }
   }
 
   return (
     <CitiesContext.Provider
-      value={{
-        cities,
-        isLoading,
-        currentCity,
-        error,
-        getCity,
-        createCity,
-        deleteCity,
-      }}
+      value={{ cities, isLoading, currentCity, error, getCity, createCity, deleteCity }}
     >
       {children}
     </CitiesContext.Provider>
